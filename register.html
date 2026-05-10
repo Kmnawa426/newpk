@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Access Request</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+      <section class="card">
+        <div class="top-row workspace-header">
+          <div class="workspace-copy">
+            <span class="eyebrow">Student Workspace</span>
+            <h1>Student Access Request</h1>
+            <p class="muted">Fill in your registered class details and request access with a clean, guided form.</p>
+          </div>
+          <a class="link-btn" href="index.html">Back to Login</a>
+        </div>
+
+      <p class="muted">Submit request. Admin approval is mandatory before viewing attendance.</p>
+
+      <div class="grid two-col">
+        <div>
+          <label for="name">Name</label>
+          <input id="name" type="text" placeholder="Student name">
+        </div>
+        <div>
+          <label for="classroomId">Class</label>
+          <select id="classroomId">
+            <option value="">Loading classes...</option>
+          </select>
+        </div>
+        <div>
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="Kannada">Kannada</option>
+            <option value="Hindi">Hindi</option>
+            <option value="Samskrutha">Samskrutha</option>
+          </select>
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="student@email.com">
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="Choose password">
+        </div>
+      </div>
+
+      <button id="registerBtn" class="primary" data-busy-text="Submitting...">Submit Request</button>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="session.js"></script>
+  <script src="utils.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    async function registerStudentRequest() {
+      const name = formatName(document.getElementById("name").value);
+      const classroomId = document.getElementById("classroomId").value;
+      const language = normalizeLanguage(document.getElementById("language").value);
+      const email = normalizeEmail(document.getElementById("email").value);
+      const password = document.getElementById("password").value;
+
+      if (!name || !classroomId || !language || !email || !password) {
+        alert("Please fill required fields.");
+        return;
+      }
+
+      if (!isValidName(name)) {
+        alert("Enter a valid student name.");
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        alert("Enter a valid email address.");
+        return;
+      }
+
+      if (!isStrongPassword(password)) {
+        alert("Password should be at least 6 characters.");
+        return;
+      }
+
+      const { data: existing, error: existingError } = await db
+        .from("students")
+        .select("*")
+        .eq("classroom_id", classroomId)
+        .eq("name", name)
+        .eq("language", language)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error("Student lookup failed:", existingError);
+        alert("Unable to verify student details right now.");
+        return;
+      }
+
+      if (!existing) {
+        alert("Student name not found in school database. Contact admin/teacher.");
+        return;
+      }
+
+      const { data: sameEmail, error: sameEmailError } = await db
+        .from("students")
+        .select("id")
+        .eq("email", email)
+        .neq("id", existing.id);
+
+      if (sameEmailError) {
+        console.error("Email verification failed:", sameEmailError);
+        alert("Unable to verify student email right now.");
+        return;
+      }
+
+      if (sameEmail && sameEmail.length) {
+        alert("Email is already used by another student.");
+        return;
+      }
+
+      const { error: updateError } = await db
+        .from("students")
+        .update({
+          email,
+          password,
+          access_requested: true,
+          access_granted: false
+        })
+        .eq("id", existing.id);
+
+      if (updateError) {
+        console.error("Student registration failed:", updateError);
+        alert(updateError.message.includes("duplicate") ? "Email already exists." : "Failed to submit access request.");
+        return;
+      }
+
+      alert("Access request submitted. Wait for admin approval.");
+      await signOutAndClearSession();
+      window.location.href = "index.html";
+    }
+
+    function classroomLabel(classroom) {
+      const section = normalizeSection(classroom.section);
+      return section ? `${classroom.class_name} - ${section}` : classroom.class_name;
+    }
+
+    function studentCountLabel(count) {
+      return `${count} student${count === 1 ? "" : "s"}`;
+    }
+
+    async function loadClassroomOptions() {
+      const select = document.getElementById("classroomId");
+      const [classroomsResponse, studentsResponse] = await Promise.all([
+        db.from("classrooms").select("*"),
+        db.from("students").select("id, classroom_id")
+      ]);
+
+      if (classroomsResponse.error || studentsResponse.error) {
+        console.error("Classroom options failed:", classroomsResponse.error || studentsResponse.error);
+        select.innerHTML = `<option value="">Unable to load classes</option>`;
+        return;
+      }
+
+      const studentCounts = new Map();
+      (studentsResponse.data || []).forEach((student) => {
+        studentCounts.set(student.classroom_id, (studentCounts.get(student.classroom_id) || 0) + 1);
+      });
+      const classrooms = sortByLabel(classroomsResponse.data || [], classroomLabel);
+      select.innerHTML = classrooms.length
+        ? [
+            `<option value="">Select class</option>`,
+            ...classrooms.map((classroom) => {
+              const count = studentCounts.get(classroom.id) || 0;
+              return `<option value="${classroom.id}">${escapeHtml(`${classroomLabel(classroom)} - ${studentCountLabel(count)}`)}</option>`;
+            })
+          ].join("")
+        : `<option value="">No classes created by admin</option>`;
+    }
+
+    document.getElementById("registerBtn").addEventListener("click", (event) => {
+      runLockedAction("student-access-request", registerStudentRequest, event.currentTarget);
+    });
+    loadClassroomOptions();
+  </script>
+</body>
+</html>

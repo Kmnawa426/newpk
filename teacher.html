@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+      <section class="card">
+        <div class="top-row workspace-header">
+          <div class="workspace-copy">
+            <span class="eyebrow">Teacher Workspace</span>
+            <h1 id="teacherTitle">Teacher Panel</h1>
+            <p class="muted">Review your classes, mark attendance, and inspect class-wise presence in a focused workspace.</p>
+          </div>
+          <div class="header-actions">
+            <span class="session-chip">Attendance Desk</span>
+            <button id="logoutBtn" class="ghost logout-btn">Logout</button>
+          </div>
+        </div>
+
+      <section class="stats-grid compact">
+        <article class="stat-card">
+          <span class="stat-label">Assigned Classes</span>
+          <strong id="assignedCount">0</strong>
+          <span class="stat-meta">Classes managed by you</span>
+        </article>
+        <article class="stat-card accent">
+          <span class="stat-label">Ready Students</span>
+          <strong id="readyStudentCount">0</strong>
+          <span class="stat-meta">Approved students in your classes</span>
+        </article>
+      </section>
+
+      <div class="dashboard-shell">
+        <aside class="dashboard-nav">
+          <button class="nav-tab active" data-panel="teacherAssignments">Class Schedule</button>
+          <button class="nav-tab" data-panel="teacherAttendance">Take Attendance</button>
+          <button class="nav-tab" data-panel="teacherReports">Attendance Reports</button>
+        </aside>
+
+        <section class="dashboard-content">
+          <article id="teacherAssignments" class="panel dashboard-panel active">
+            <h2>Your Teaching Schedule</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>SL No</th>
+                    <th>Class</th>
+                    <th>Section</th>
+                    <th>Subject</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="assignedClassesBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="teacherAttendance" class="panel dashboard-panel">
+            <div class="top-row">
+              <h2 id="attendanceHeading">Attendance Sheet</h2>
+              <div class="attendance-actions">
+                <label for="attendanceDate">Date</label>
+                <input id="attendanceDate" type="date">
+                <label for="attendanceTime">Time / Period</label>
+                <input id="attendanceTime" type="time">
+                <button id="submitAttendanceBtn" class="primary">Submit Attendance</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>SL No</th>
+                    <th>Name</th>
+                    <th>Class</th>
+                    <th>Section</th>
+                    <th>Language</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="studentAttendanceBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="teacherReports" class="panel dashboard-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Attendance Report</h2>
+                <p class="muted">View attendance like a spreadsheet. Hover over total present to see each student's overall percentage.</p>
+              </div>
+              <button id="exportReportBtn" class="ghost small" type="button">Export CSV</button>
+            </div>
+
+            <div class="toolbar-row">
+              <div class="toolbar-group">
+                <label for="reportAssignmentSelect">Class + Subject</label>
+                <select id="reportAssignmentSelect"></select>
+              </div>
+              <div class="toolbar-group action-group">
+                <button id="loadReportBtn" class="primary" type="button">Load Report</button>
+              </div>
+            </div>
+
+            <div id="attendanceReportSummary" class="panel-subtitle"></div>
+
+            <div class="table-wrap attendance-matrix-wrap">
+              <table class="attendance-matrix">
+                <thead id="attendanceMatrixHead"></thead>
+                <tbody id="attendanceMatrixBody">
+                  <tr><td class="empty">Choose a class and load attendance.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="confirmModal" class="modal-shell">
+    <div class="modal-card app-modal-warning modal-content">
+      <span class="modal-badge badge text-bg-warning">Attendance Check</span>
+      <h3>Confirm Attendance Submission</h3>
+      <p class="modal-message">Review the absent students below before saving attendance.</p>
+      <ul id="absentList" class="modal-list list-group list-group-flush"></ul>
+      <div class="modal-actions modal-footer">
+        <button id="cancelConfirm" class="ghost btn btn-light">Cancel</button>
+        <button id="confirmSubmit" class="primary btn btn-primary">Confirm Submit</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="session.js"></script>
+  <script src="utils.js"></script>
+  <script src="ui.js"></script>
+  <script src="teacher.js"></script>
+</body>
+</html>
